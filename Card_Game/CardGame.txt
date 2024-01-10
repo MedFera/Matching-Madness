@@ -1,0 +1,195 @@
+import pygame
+import sys
+import random
+from Background import Background
+from Card import Card
+
+pygame.init()
+
+# Setting up the display
+width, height = 540, 960
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Matching Maddness")
+
+#Clock to limit FPS
+clock = pygame.time.Clock()
+
+
+#Setting up the background
+frames = ["bg_imgs/frame_000.gif","bg_imgs/frame_001.gif","bg_imgs/frame_002.gif","bg_imgs/frame_003.gif","bg_imgs/frame_004.gif","bg_imgs/frame_005.gif","bg_imgs/frame_006.gif","bg_imgs/frame_007.gif","bg_imgs/frame_008.gif","bg_imgs/frame_009.gif"]
+bg = Background(frames, 20, 120)
+
+points_dict = {1:(40,170), 2:(205,170), 3:(370,170),
+               4:(40,420), 5:(205,420), 6:(370,420),
+               7:(40,670), 8:(205,670), 9:(370,670)}
+
+#dictionary_access_keys = [1,2,3,4,5,6,7,8,9]
+
+
+
+#Card Arrays for game
+all_cards = []
+cards_in_play = []
+cards_flipped = 0
+
+#Card generator with random images
+card_images = ["card_imgs/CuteCard1.jpg", "card_imgs/CuteCard2.jpg", "card_imgs/CuteCard3.jpg", "card_imgs/CuteCard4.jpg", "card_imgs/CuteCard5.jpg","card_imgs/CuteCard6.jpg","card_imgs/CuteCard7.jpg","card_imgs/CuteCard8.jpg"]
+available_loc_keys = [1,2,3,4,5,6,7,8,9]
+
+for i in range(4):
+    rand_img = random.randint(0, (len(card_images) - 1))
+    
+    #Card 1 is generated here
+    rand_keyA = random.randint(0, (len(available_loc_keys) - 1))
+    A_Key = available_loc_keys[rand_keyA]
+    cardA = Card("card_imgs/card_back.png", card_images[rand_img],points_dict[A_Key][0], points_dict[A_Key][1])
+    available_loc_keys.pop(rand_keyA)
+    all_cards.append(cardA)
+    cards_in_play.append(cardA)
+    
+    #Card 2 matching Card 1 is generated here
+    rand_keyB = random.randint(0, (len(available_loc_keys) - 1))
+    B_Key = available_loc_keys[rand_keyB]
+    cardB = Card("card_imgs/card_back.png", card_images[rand_img],points_dict[B_Key][0], points_dict[B_Key][1])
+    available_loc_keys.pop(rand_keyB)
+    all_cards.append(cardB)
+    cards_in_play.append(cardB)
+    
+    card_images.pop(rand_img)
+
+#Bad Card always the same image
+badcard = Card("card_imgs/card_back.png","card_imgs/BadCard1.jpg",points_dict[available_loc_keys[0]][0],points_dict[available_loc_keys[0]][1])
+all_cards.append(badcard)
+cards_in_play.append(badcard)
+
+# Game loop
+running = True
+fps = 60
+delay_duration = 500  # milliseconds
+
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            touchX, touchY = event.pos
+            #print("X touch: "+ str(touchX) + "\nY touch: " + str(touchY))
+            
+            
+            if cards_flipped < 2:    
+                for card in cards_in_play:
+                    if card.rect.collidepoint((touchX,touchY)):
+                        card.is_flipped = True
+                        cards_flipped += 1
+                
+                if badcard.is_flipped == True:
+                    #Allows cards to be displayed to screen with delay
+                    for card in cards_in_play:    
+                        card.update()
+                        card.draw(screen)    
+                    
+                    pygame.display.flip()
+                    pygame.time.delay(delay_duration)
+                    
+                    #Bad Card resets position of all the cards in play
+                    dict_keys = [1,2,3,4,5,6,7,8,9]
+                    for card in cards_in_play:
+                        random_num = random.randint(0,len(dict_keys) - 1)
+                        card.rect.x = points_dict[dict_keys[random_num]][0]
+                        card.rect.y = points_dict[dict_keys[random_num]][1]
+                        dict_keys.pop(random_num)
+                    
+                    #Flips cards to back side and draws the shuffled cards to screen
+                    for card in cards_in_play:    
+                        card.is_flipped = False
+                        card.update()
+                        card.draw(screen)
+                    
+                    pygame.display.flip()    
+                    cards_flipped = 0
+            
+            if cards_flipped == 2:
+                #Stores flipped cards in array to check
+                flipped_array = []
+                for card in cards_in_play:
+                    if card.is_flipped == True:
+                        flipped_array.append(card)
+                
+                #Once two cards flipped we check if the cards relative path names match
+                if len(flipped_array) == 2:
+                    if flipped_array[0].name == flipped_array[1].name:
+                        print("Match")
+                        
+                        #This allows cards to be shown on screen to player to check match
+                        for card in flipped_array:
+                            card.is_flipped = True
+                            card.update()
+                            card.draw(screen)
+                            
+                        pygame.display.flip()
+                        pygame.time.delay(delay_duration)    
+                        
+                        for card in flipped_array:
+                            if card in cards_in_play:
+                                #Sets card match to True and moves card off board to allow cards space
+                                card.match_found = True
+                                card.rect.x = 545
+                                card.rect.y = 965
+                                cards_in_play.remove(card)
+                                
+                        for card in cards_in_play:
+                            card.is_flipped = False
+                        
+                    else:
+                        print("No match")
+                        
+                        #This allows cards to be shown on screen to player to check match
+                        for card in flipped_array:
+                            card.is_flipped = True
+                            card.update()
+                            card.draw(screen)
+                            
+                        pygame.display.flip()
+                        pygame.time.delay(delay_duration)
+                        
+                        for card in cards_in_play:
+                            card.is_flipped = False
+                
+                
+                cards_flipped = 0
+                flipped_array = []
+            
+                
+        if event.type == pygame.FINGERDOWN:
+            print(event)
+
+    
+    
+    
+    
+    
+        
+    #Updates for sprites
+    bg.update()
+    for card in cards_in_play:
+        if card.match_found == False:
+            card.update()
+    
+    
+    
+    #Draw all sprites
+    bg.draw(screen)
+    for card in cards_in_play:
+        if card.match_found == False:
+            card.draw(screen)
+
+    clock.tick(fps)
+    
+    #print(pygame.time.get_ticks())
+    #Updates the screen display
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
